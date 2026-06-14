@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --focus: #14213d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(255, 209, 102, 0.42), transparent 34rem),
+    linear-gradient(135deg, #fffaf0 0%, #e8fbff 42%, #fff1f1 100%);
+  color: #14213d;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 4px solid var(--focus);
+  outline-offset: 4px;
+}
+
+.touch-card {
+  border: 3px solid rgba(20, 33, 61, 0.12);
+  box-shadow: 0 14px 0 rgba(20, 33, 61, 0.08);
+}
+
+.safe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+}
