@@ -77,8 +77,9 @@ export const initialState: BusinessLabState = {
     { id: "bath-mix", name: "Bath Bomb Mix", photo: "/assets/bath-bombs.png", quantityAvailable: 54 },
     { id: "wrapping", name: "Wrapping", photo: "/assets/bath-bombs.png", quantityAvailable: 42 }
   ],
-  sales: [],
+    sales: [],
   production: [],
+  activities: [],
   badges,
   poster: {
     productId: "bracelets",

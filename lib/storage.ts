@@ -3,6 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { initialState } from "./sample-data";
 import type { BadgeId, BusinessLabState, CoachMoment, Product, RawMaterial } from "./types";
+import {
+  getProducts,
+  getRawMaterials,
+  getRecipes,
+  getActivities,
+  updateProductStock,
+  updateRawMaterialStock,
+} from "./supabase";
 
 const STORAGE_KEY = "campus-life-business-lab-state-v1";
 
@@ -12,13 +20,40 @@ export function useBusinessLabStore() {
   const [state, setState] = useState<BusinessLabState>(cloneState);
   const [ready, setReady] = useState(false);
 
-  useEffect(() => {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      setState(JSON.parse(saved) as BusinessLabState);
-    }
-    setReady(true);
-  }, []);
+ useEffect(() => {
+  async function load() {
+  try {
+    const products = await getProducts();
+    const rawMaterials = await getRawMaterials();
+    const recipes = await getRecipes();
+    const activities = await getActivities();
+
+console.log("Activities loaded:", activities);
+    const productsWithRecipes = products.map((product) => ({
+  ...product,
+  recipe: recipes
+    .filter((recipe) => recipe.product_id === product.id)
+    .map((recipe) => ({
+      materialId: recipe.material_id,
+      quantity: recipe.quantity_required
+    }))
+}));
+
+setState((current) => ({
+  ...current,
+  products: productsWithRecipes,
+  rawMaterials,
+  activities
+}));
+  } catch (err) {
+    console.error("Failed to load data", err);
+  }
+
+  setReady(true);
+}
+
+  load();
+}, []);
 
   useEffect(() => {
     if (ready) {
@@ -50,7 +85,7 @@ export function useBusinessLabStore() {
           )
         }));
       },
-      makeProduct(productId: string) {
+      async makeProduct(productId: string) {
         setState((current) => {
           const product = current.products.find((item) => item.id === productId);
           if (!product) {
@@ -65,6 +100,28 @@ export function useBusinessLabStore() {
           if (!canMake) {
             return current;
           }
+          const updatedProductStock = product.currentQuantity + 1;
+
+updateProductStock(
+  product.id,
+  updatedProductStock
+).catch(console.error);
+product.recipe.forEach((recipeItem) => {
+  const material = current.rawMaterials.find(
+    (m) => m.id === recipeItem.materialId
+  );
+
+  if (!material) return;
+
+  const newQuantity =
+    material.quantityAvailable - recipeItem.quantity;
+
+  updateRawMaterialStock(
+    material.id,
+    newQuantity
+  ).catch(console.error);
+});
+
 
           return {
             ...current,
@@ -87,51 +144,111 @@ export function useBusinessLabStore() {
           };
         });
       },
-      sellOne(productId: string) {
-        setState((current) => ({
-          ...current,
-          products: current.products.map((product) =>
-            product.id === productId
-              ? { ...product, currentQuantity: Math.max(0, product.currentQuantity - 1) }
-              : product
-          ),
-          sales: [
-            ...current.sales,
-            { id: crypto.randomUUID(), productId, quantity: 1, createdAt: new Date().toISOString() }
-          ],
-          badges: current.badges.map((badge) =>
-            badge.id === "sales-superstar" ? { ...badge, earned: true } : badge
-          )
-        }));
-      },
-      addProduct(product: Product) {
-        setState((current) => ({ ...current, products: [...current.products, product] }));
-      },
-      updateProduct(product: Product) {
-        setState((current) => ({
-          ...current,
-          products: current.products.map((item) => (item.id === product.id ? product : item))
-        }));
-      },
-      addMaterial(material: RawMaterial) {
-        setState((current) => ({ ...current, rawMaterials: [...current.rawMaterials, material] }));
-      },
-      updateMaterial(material: RawMaterial) {
-        setState((current) => ({
-          ...current,
-          rawMaterials: current.rawMaterials.map((item) => (item.id === material.id ? material : item))
-        }));
-      },
-      setPoster(productId: string, headline: string, color: string, message: string) {
-        setState((current) => ({ ...current, poster: { productId, headline, color, message } }));
-      }
-    }),
+      async sellOne(productId: string) {
+  setState((current) => {
+    const product = current.products.find(
+      (item) => item.id === productId
+    );
+
+    if (!product) {
+      return current;
+    }
+
+    const updatedStock = Math.max(
+      0,
+      product.currentQuantity - 1
+    );
+
+    updateProductStock(
+      product.id,
+      updatedStock
+    ).catch(console.error);
+
+    return {
+      ...current,
+      products: current.products.map((item) =>
+        item.id === productId
+          ? {
+              ...item,
+              currentQuantity: Math.max(
+                0,
+                item.currentQuantity - 1
+              )
+            }
+          : item
+      ),
+      sales: [
+        ...current.sales,
+        {
+          id: crypto.randomUUID(),
+          productId,
+          quantity: 1,
+          createdAt: new Date().toISOString()
+        }
+      ],
+      badges: current.badges.map((badge) =>
+        badge.id === "sales-superstar"
+          ? { ...badge, earned: true }
+          : badge
+      )
+    };
+  });
+},
+
+addProduct(product: Product) {
+  setState((current) => ({
+    ...current,
+    products: [...current.products, product]
+  }));
+},
+
+updateProduct(product: Product) {
+  setState((current) => ({
+    ...current,
+    products: current.products.map((item) =>
+      item.id === product.id ? product : item
+    )
+  }));
+},
+
+addMaterial(material: RawMaterial) {
+  setState((current) => ({
+    ...current,
+    rawMaterials: [...current.rawMaterials, material]
+  }));
+},
+
+updateMaterial(material: RawMaterial) {
+  setState((current) => ({
+    ...current,
+    rawMaterials: current.rawMaterials.map((item) =>
+      item.id === material.id ? material : item
+    )
+  }));
+},
+
+setPoster(
+  productId: string,
+  headline: string,
+  color: string,
+  message: string
+) {
+  setState((current) => ({
+    ...current,
+    poster: {
+      productId,
+      headline,
+      color,
+      message
+    }
+  }));
+}
+          }),
     []
   );
 
   return { state, setState, actions, ready };
 }
-
 export function coachMoment(kind: string, productName?: string): CoachMoment {
   const name = productName ?? "this product";
   const moments: Record<string, CoachMoment> = {

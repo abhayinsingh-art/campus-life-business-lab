@@ -22,8 +22,26 @@ import type { ElementType, ReactNode } from "react";
 import { futureModules } from "@/lib/sample-data";
 import { coachMoment, useBusinessLabStore } from "@/lib/storage";
 import type { CoachMoment, Product, RawMaterial } from "@/lib/types";
+import {
+  createProduct,
+  createRawMaterial,
+  createRecipe,
+  deleteRecipe,
+  updateRecipe,
+  createActivity,
+  deleteProduct,
+  deleteRawMaterial,
+  deleteActivity
+} from "@/lib/supabase";
 
-type Mode = "make" | "stocktake" | "market" | "marketing" | "decision" | "assistant";
+type Mode =
+  | "make"
+  | "stocktake"
+  | "market"
+  | "marketing"
+  | "decision"
+  | "activities"
+  | "assistant";
 
 const modes: { id: Mode; label: string; icon: ElementType; assistantOnly?: boolean }[] = [
   { id: "make", label: "Make", icon: Factory },
@@ -31,6 +49,7 @@ const modes: { id: Mode; label: string; icon: ElementType; assistantOnly?: boole
   { id: "market", label: "Sell", icon: Store },
   { id: "marketing", label: "Poster", icon: Megaphone },
   { id: "decision", label: "Decide", icon: BarChart3 },
+  { id: "activities", label: "Activities", icon: Sparkles },
   { id: "assistant", label: "Setup", icon: UserRoundCog, assistantOnly: true }
 ];
 
@@ -43,12 +62,19 @@ export default function Home() {
   const [mode, setMode] = useState<Mode>("make");
   const [assistantMode, setAssistantMode] = useState(false);
   const [coach, setCoach] = useState<CoachMoment>(coachMoment("decide"));
+  const [selectedActivityId, setSelectedActivityId] =
+  useState<string | null>(null);
 
-  useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => undefined);
-    }
-  }, []);
+const selectedActivity =
+  state.activities.find(
+    (activity) => activity.id === selectedActivityId
+  );
+
+//  useEffect(() => {
+  //  if ("serviceWorker" in navigator) {
+    //  navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+   // }
+//  }, []);
 
   const selectedPosterProduct = state.products.find((product) => product.id === state.poster.productId) ?? state.products[0];
 
@@ -305,9 +331,107 @@ export default function Home() {
         </section>
       )}
 
+      {mode === "activities" && (
+  <section className="space-y-5">
+    <h2 className="text-4xl font-black">Activities</h2>
+
+    {!selectedActivity && (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {state.activities.map((activity) => (
+          <button
+            key={activity.id}
+            type="button"
+            onClick={() =>
+              setSelectedActivityId(activity.id)
+            }
+            className="touch-card rounded-[2rem] bg-white p-6 text-left shadow-soft"
+          >
+            <div className="flex items-center justify-between">
+  <h3 className="text-2xl font-black">
+    {activity.title}
+  </h3>
+
+  {assistantMode && (
+    <button
+      type="button"
+      onClick={async (e) => {
+        e.stopPropagation();
+
+        if (!confirm("Delete this activity?"))
+          return;
+
+        try {
+          await deleteActivity(activity.id);
+          window.location.reload();
+        } catch (err) {
+          console.error(err);
+        }
+      }}
+      className="rounded-2xl bg-coral px-4 py-2 font-black text-white"
+    >
+      Delete
+    </button>
+  )}
+</div>
+
+            <p className="mt-3 text-lg">
+              Tap to start activity
+            </p>
+          </button>
+        ))}
+      </div>
+    )}
+
+    {selectedActivity && (
+      <div className="rounded-[2rem] bg-white p-6 shadow-soft">
+        <button
+          type="button"
+          onClick={() =>
+            setSelectedActivityId(null)
+          }
+          className="mb-4 rounded-3xl bg-sunshine px-4 py-3 font-black"
+        >
+          ← Back to Activities
+        </button>
+
+        <h2 className="text-4xl font-black">
+          {selectedActivity.title}
+        </h2>
+
+        <div className="mt-6 grid gap-4">
+          <div className="rounded-3xl bg-paper p-4">
+            <p className="text-xl font-black">Learn</p>
+            <p>{selectedActivity.learn}</p>
+          </div>
+
+          <div className="rounded-3xl bg-paper p-4">
+            <p className="text-xl font-black">Do</p>
+            <p>{selectedActivity.activity_do}</p>
+          </div>
+
+          <div className="rounded-3xl bg-paper p-4">
+            <p className="text-xl font-black">Understand</p>
+            <p>{selectedActivity.understand}</p>
+          </div>
+
+          <div className="rounded-3xl bg-paper p-4">
+            <p className="text-xl font-black">Decide</p>
+            <p>{selectedActivity.decide}</p>
+          </div>
+
+          <div className="rounded-3xl bg-paper p-4">
+            <p className="text-xl font-black">Reflect</p>
+            <p>{selectedActivity.reflect}</p>
+          </div>
+        </div>
+      </div>
+    )}
+  </section>
+)}
+
       {mode === "assistant" && assistantMode && <AssistantPanel state={state} actions={actions} />}
 
-      <section className="grid gap-4 rounded-[2rem] bg-white/78 p-5 shadow-soft lg:grid-cols-[1fr_1fr]">
+      <section className="rounded-[2rem] bg-white/78 p-5 shadow-soft">
         <div>
           <h2 className="text-3xl font-black">Badges</h2>
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -318,17 +442,6 @@ export default function Home() {
               >
                 <BadgeCheck className="mx-auto" size={34} aria-hidden />
                 <p className="mt-2 text-lg font-black">{badge.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div>
-          <h2 className="text-3xl font-black">Future Modules</h2>
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            {futureModules.map((module) => (
-              <div key={module.id} className="rounded-3xl bg-paper p-4">
-                <p className="text-lg font-black">{module.title}</p>
-                <p className="text-sm font-bold">Learn - Do - Understand - Decide - Reflect</p>
               </div>
             ))}
           </div>
@@ -477,6 +590,7 @@ function AssistantPanel({
   state: ReturnType<typeof useBusinessLabStore>["state"];
   actions: ReturnType<typeof useBusinessLabStore>["actions"];
 }) {
+
   const [productDraft, setProductDraft] = useState({
     name: "",
     description: "",
@@ -489,6 +603,15 @@ function AssistantPanel({
     quantityAvailable: 20,
     photo: "/assets/bracelets.png"
   });
+
+const [activityDraft, setActivityDraft] = useState({
+  title: "",
+  learn: "",
+  do: "",
+  understand: "",
+  decide: "",
+  reflect: ""
+});
 
   const exportReport = () => {
     const report = {
@@ -508,39 +631,95 @@ function AssistantPanel({
     URL.revokeObjectURL(url);
   };
 
-  const addProduct = (event: FormEvent) => {
-    event.preventDefault();
-    if (!productDraft.name.trim()) {
-      return;
-    }
-    const id = productDraft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-    actions.addProduct({
-      id: `${id}-${Date.now()}`,
-      name: productDraft.name,
-      description: productDraft.description || "A product made by the campus team.",
-      currentQuantity: productDraft.currentQuantity,
-      minimumStockLevel: productDraft.minimumStockLevel,
-      photo: productDraft.photo,
-      rawMaterialIds: [],
-      recipe: []
-    });
-    setProductDraft({ name: "", description: "", currentQuantity: 0, minimumStockLevel: 3, photo: "/assets/bracelets.png" });
-  };
+  const addProduct = async (event: FormEvent) => {
+  event.preventDefault();
 
-  const addMaterial = (event: FormEvent) => {
-    event.preventDefault();
-    if (!materialDraft.name.trim()) {
-      return;
-    }
-    const id = materialDraft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-    actions.addMaterial({
-      id: `${id}-${Date.now()}`,
-      name: materialDraft.name,
-      quantityAvailable: materialDraft.quantityAvailable,
-      photo: materialDraft.photo
+  if (!productDraft.name.trim()) {
+    return;
+  }
+
+  try {
+    await createProduct(
+      productDraft.name,
+      productDraft.description,
+      productDraft.currentQuantity,
+      productDraft.minimumStockLevel,
+      productDraft.photo
+    );
+
+    setProductDraft({
+      name: "",
+      description: "",
+      currentQuantity: 0,
+      minimumStockLevel: 3,
+      photo: "/assets/bracelets.png"
     });
-    setMaterialDraft({ name: "", quantityAvailable: 20, photo: "/assets/bracelets.png" });
-  };
+
+    window.location.reload();
+  } catch (err) {
+    console.error(err);
+    alert("Failed to create product");
+  }
+};
+
+  const addMaterial = async (event: FormEvent) => {
+  event.preventDefault();
+
+  if (!materialDraft.name.trim()) {
+    return;
+  }
+
+  try {
+    await createRawMaterial(
+      materialDraft.name,
+      materialDraft.quantityAvailable,
+      materialDraft.photo
+    );
+
+    setMaterialDraft({
+      name: "",
+      quantityAvailable: 0,
+      photo: "/assets/kylie-koala.png"
+    });
+
+    window.location.reload();
+  } catch (err) {
+    console.error(err);
+    alert("Failed to create raw material");
+  }
+};
+const addActivity = async (event: FormEvent) => {
+  event.preventDefault();
+
+  if (!activityDraft.title.trim()) {
+    return;
+  }
+
+  try {
+    await createActivity({
+      title: activityDraft.title,
+      learn: activityDraft.learn,
+      activity_do: activityDraft.do,
+      understand: activityDraft.understand,
+      decide: activityDraft.decide,
+      reflect: activityDraft.reflect
+    });
+
+    setActivityDraft({
+      title: "",
+      learn: "",
+      do: "",
+      understand: "",
+      decide: "",
+      reflect: ""
+    });
+
+    window.location.reload();
+  } catch (err) {
+    console.error(err);
+    alert("Failed to create activity");
+  }
+};
 
   return (
     <section className="grid gap-5 lg:grid-cols-2">
@@ -567,7 +746,89 @@ function AssistantPanel({
           Add Product
         </button>
       </form>
+<form
+  onSubmit={addActivity}
+  className="rounded-[2rem] bg-white p-5 shadow-soft lg:col-span-2"
+>
+  <div className="flex items-center justify-between">
+  <h2 className="text-3xl font-black">
+    Create Activity
+  </h2>
 
+</div>
+  <TextInput
+    label="Activity Title"
+    value={activityDraft.title}
+    onChange={(value) =>
+      setActivityDraft({
+        ...activityDraft,
+        title: value
+      })
+    }
+  />
+
+  <TextInput
+    label="Learn"
+    value={activityDraft.learn}
+    onChange={(value) =>
+      setActivityDraft({
+        ...activityDraft,
+        learn: value
+      })
+    }
+  />
+
+  <TextInput
+    label="Do"
+    value={activityDraft.do}
+    onChange={(value) =>
+      setActivityDraft({
+        ...activityDraft,
+        do: value
+      })
+    }
+  />
+
+  <TextInput
+    label="Understand"
+    value={activityDraft.understand}
+    onChange={(value) =>
+      setActivityDraft({
+        ...activityDraft,
+        understand: value
+      })
+    }
+  />
+
+  <TextInput
+    label="Decide"
+    value={activityDraft.decide}
+    onChange={(value) =>
+      setActivityDraft({
+        ...activityDraft,
+        decide: value
+      })
+    }
+  />
+
+  <TextInput
+    label="Reflect"
+    value={activityDraft.reflect}
+    onChange={(value) =>
+      setActivityDraft({
+        ...activityDraft,
+        reflect: value
+      })
+    }
+  />
+
+  <button
+    type="submit"
+    className="mt-4 min-h-16 w-full rounded-3xl bg-sunshine text-xl font-black"
+  >
+    Save Activity
+  </button>
+</form>
       <form onSubmit={addMaterial} className="rounded-[2rem] bg-white p-5 shadow-soft">
         <h2 className="text-3xl font-black">Add Raw Material</h2>
         <TextInput label="Material name" value={materialDraft.name} onChange={(value) => setMaterialDraft({ ...materialDraft, name: value })} />
@@ -584,7 +845,12 @@ function AssistantPanel({
 
       <div className="rounded-[2rem] bg-white p-5 shadow-soft lg:col-span-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-3xl font-black">Products and Recipes</h2>
+          <div className="flex items-center justify-between">
+  <h2 className="text-3xl font-black">
+    Products and Recipes
+  </h2>
+
+</div>
           <div className="flex gap-3">
             <button type="button" onClick={exportReport} className="flex min-h-14 items-center gap-2 rounded-3xl bg-ink px-5 font-black text-white">
               <Download size={24} aria-hidden />
@@ -602,7 +868,30 @@ function AssistantPanel({
               <div className="grid gap-3 md:grid-cols-[8rem_1fr]">
                 <Image src={product.photo} alt="" width={160} height={120} className="h-32 w-full rounded-2xl object-cover" />
                 <div>
-                  <p className="text-2xl font-black">{product.name}</p>
+                  <div className="flex items-center justify-between">
+  <p className="text-2xl font-black">
+    {product.name}
+  </p>
+
+  <button
+    type="button"
+    onClick={async () => {
+      if (!confirm("Delete this product?"))
+        return;
+
+      try {
+        await deleteProduct(product.id);
+        window.location.reload();
+      } catch (err) {
+        console.error(err);
+      }
+    }}
+    className="rounded-2xl bg-coral px-4 py-2 font-black text-white"
+  >
+    Delete
+  </button>
+</div>
+
                   <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     <NumberInput
                       label="Current stock"
@@ -624,16 +913,27 @@ function AssistantPanel({
                           <button
                             key={material.id}
                             type="button"
-                            onClick={() => {
-                              const recipe = existing
-                                ? product.recipe.filter((item) => item.materialId !== material.id)
-                                : [...product.recipe, { materialId: material.id, quantity: 1 }];
-                              actions.updateProduct({
-                                ...product,
-                                rawMaterialIds: recipe.map((item) => item.materialId),
-                                recipe
-                              });
-                            }}
+                            onClick={async () => {
+  try {
+    if (existing) {
+      await deleteRecipe(
+        product.id,
+        material.id
+      );
+    } else {
+      await createRecipe(
+        product.id,
+        material.id,
+        1
+      );
+    }
+
+    window.location.reload();
+  } catch (err) {
+    console.error(err);
+  }
+}}
+
                             className={`rounded-3xl px-4 py-3 font-black ${existing ? "bg-sunshine" : "bg-white"}`}
                           >
                             {material.name}
@@ -644,23 +944,31 @@ function AssistantPanel({
                     {product.recipe.length > 0 && (
                       <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                         {product.recipe.map((recipeItem) => {
-                          const material = state.rawMaterials.find((item) => item.id === recipeItem.materialId);
-                          return (
-                            <NumberInput
-                              key={recipeItem.materialId}
-                              label={`${material?.name ?? "Material"} used`}
-                              value={recipeItem.quantity}
-                              onChange={(value) =>
-                                actions.updateProduct({
-                                  ...product,
-                                  recipe: product.recipe.map((item) =>
-                                    item.materialId === recipeItem.materialId ? { ...item, quantity: value } : item
-                                  )
-                                })
-                              }
-                            />
-                          );
-                        })}
+  const material = state.rawMaterials.find(
+    (item) => item.id === recipeItem.materialId
+  );
+
+  return (
+    <NumberInput
+      key={recipeItem.materialId}
+      label={material?.name ?? "Material"}
+      value={recipeItem.quantity}
+      onChange={async (value) => {
+        try {
+          await updateRecipe(
+            product.id,
+            recipeItem.materialId,
+            Number(value)
+          );
+
+          window.location.reload();
+        } catch (err) {
+          console.error(err);
+        }
+      }}
+    />
+  );
+})}
                       </div>
                     )}
                   </div>
@@ -672,12 +980,39 @@ function AssistantPanel({
       </div>
 
       <div className="rounded-[2rem] bg-white p-5 shadow-soft lg:col-span-2">
-        <h2 className="text-3xl font-black">Raw Materials</h2>
+        <div className="flex items-center justify-between">
+  <h2 className="text-3xl font-black">
+    Raw Materials
+  </h2>
+
+</div>
         <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {state.rawMaterials.map((material) => (
             <div key={material.id} className="rounded-3xl bg-paper p-4">
               <Image src={material.photo} alt="" width={160} height={120} className="h-32 w-full rounded-2xl object-cover" />
-              <p className="mt-3 text-2xl font-black">{material.name}</p>
+              <div className="mt-3 flex items-center justify-between">
+  <p className="text-2xl font-black">
+    {material.name}
+  </p>
+
+  <button
+    type="button"
+    onClick={async () => {
+      if (!confirm("Delete this material?"))
+        return;
+
+      try {
+        await deleteRawMaterial(material.id);
+        window.location.reload();
+      } catch (err) {
+        console.error(err);
+      }
+    }}
+    className="rounded-2xl bg-coral px-4 py-2 font-black text-white"
+  >
+    Delete
+  </button>
+</div>
               <NumberInput
                 label="Quantity available"
                 value={material.quantityAvailable}
@@ -690,6 +1025,7 @@ function AssistantPanel({
     </section>
   );
 }
+  
 
 function TextInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return (

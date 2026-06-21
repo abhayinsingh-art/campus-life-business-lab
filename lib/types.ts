@@ -60,6 +60,7 @@ export type BusinessLabState = {
   production: ProductionRecord[];
   badges: Badge[];
   poster: Poster;
+  activities: Activity[];
 };
 
 export type ModuleStage = "learn" | "do" | "understand" | "decide" | "reflect";
@@ -73,4 +74,22 @@ export type FutureModule = {
 export type CoachMoment = {
   title: string;
   lines: [string, string, string];
+};
+export type SupabaseProduct = {
+  id: string;
+  name: string;
+  description: string | null;
+  stock: number;
+  minimum_stock: number;
+  image_url: string | null;
+};
+
+export type Activity = {
+  id: string;
+  title: string;
+  learn: string;
+  activity_do: string;
+  understand: string;
+  decide: string;
+  reflect: string;
 };
