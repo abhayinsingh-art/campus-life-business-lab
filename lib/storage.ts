@@ -12,7 +12,8 @@ import {
   updateRawMaterialStock,
 } from "./supabase";
 
-const STORAGE_KEY = "campus-life-business-lab-state-v1";
+const STORAGE_KEY =
+  "campus-life-business-lab-state-v2";
 
 const cloneState = (): BusinessLabState => JSON.parse(JSON.stringify(initialState));
 
