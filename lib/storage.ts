@@ -56,12 +56,6 @@ setState((current) => ({
   load();
 }, []);
 
-  useEffect(() => {
-    if (ready) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    }
-  }, [ready, state]);
-
   const actions = useMemo(
     () => ({
       reset() {
