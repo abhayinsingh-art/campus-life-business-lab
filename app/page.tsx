@@ -12,7 +12,6 @@ import {
   Minus,
   PackagePlus,
   Plus,
-  RefreshCcw,
   Sparkles,
   Store,
   UserRoundCog
@@ -251,14 +250,25 @@ const selectedActivity =
 
       {mode === "marketing" && selectedPosterProduct && (
         <section className="grid gap-5 lg:grid-cols-[24rem_1fr]">
-          <div className="rounded-[2rem] bg-white p-5 shadow-soft">
+          <div className="rounded-[2rem] bg-white p-5 shadow-soft overflow-y-auto">
             <h2 className="text-3xl font-black">Marketing Studio</h2>
-            <GuidedChoices
-              label="Choose product"
-              options={state.products.map((product) => ({ label: product.name, value: product.id }))}
-              value={state.poster.productId}
-              onChange={(value) => actions.setPoster(value, state.poster.headline, state.poster.color, state.poster.message)}
-            />
+
+<GuidedChoices
+  label="Choose product"
+  options={state.products.map((product) => ({
+    label: product.name,
+    value: product.id
+  }))}
+  value={state.poster.productId}
+  onChange={(value) =>
+    actions.setPoster(
+      value,
+      state.poster.headline,
+      state.poster.color,
+      state.poster.message
+    )
+  }
+/>
             <GuidedChoices
               label="Choose headline"
               options={posterHeadlines.map((item) => ({ label: item, value: item }))}
@@ -533,20 +543,26 @@ function GuidedChoices({
 }) {
   return (
     <div className="mt-4">
-      <p className="mb-2 text-xl font-black">{label}</p>
+      <p className="mb-2 text-xl font-black">
+  {label}
+</p>
       <div className="grid gap-2">
-        {options.slice(0, 3).map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => onChange(option.value)}
-            className={`min-h-14 rounded-3xl px-4 text-left text-lg font-black ${
-              value === option.value ? "bg-sunshine" : "bg-paper"
-            }`}
-          >
-            {option.label}
-          </button>
-        ))}
+        {options.map((option, index) => {
+
+
+  return (
+    <button
+      key={option.value}
+      type="button"
+      onClick={() => onChange(option.value)}
+      className={`min-h-14 rounded-3xl px-4 text-left text-lg font-black ${
+        value === option.value ? "bg-sunshine" : "bg-paper"
+      }`}
+    >
+      {option.label}
+    </button>
+  );
+})}
       </div>
     </div>
   );
@@ -851,16 +867,6 @@ const addActivity = async (event: FormEvent) => {
   </h2>
 
 </div>
-          <div className="flex gap-3">
-            <button type="button" onClick={exportReport} className="flex min-h-14 items-center gap-2 rounded-3xl bg-ink px-5 font-black text-white">
-              <Download size={24} aria-hidden />
-              Export
-            </button>
-            <button type="button" onClick={actions.reset} className="flex min-h-14 items-center gap-2 rounded-3xl bg-coral px-5 font-black text-white">
-              <RefreshCcw size={24} aria-hidden />
-              Reset
-            </button>
-          </div>
         </div>
         <div className="mt-4 grid gap-4">
           {state.products.map((product) => (

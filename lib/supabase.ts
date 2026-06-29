@@ -1,5 +1,3 @@
-console.log("SUPABASE FILE LOADED");
-
 import { createClient } from "@supabase/supabase-js";
 import type { Product } from "./types";
 

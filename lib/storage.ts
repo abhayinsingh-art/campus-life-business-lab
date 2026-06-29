@@ -58,9 +58,7 @@ setState((current) => ({
 
   const actions = useMemo(
     () => ({
-      reset() {
-        setState(cloneState());
-      },
+      
       earnBadge(id: BadgeId) {
         setState((current) => ({
           ...current,
