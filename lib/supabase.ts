@@ -20,6 +20,8 @@ export async function getProducts(): Promise<Product[]> {
     .from("products")
     .select("*");
 
+  console.log("PRODUCTS:", data, error);
+
   if (error) {
     throw error;
   }
@@ -35,6 +37,7 @@ export async function getProducts(): Promise<Product[]> {
     recipe: []
   }));
 }
+
 type SupabaseRawMaterial = {
   id: string;
   name: string;

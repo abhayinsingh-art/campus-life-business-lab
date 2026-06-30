@@ -24,11 +24,24 @@ export function useBusinessLabStore() {
  useEffect(() => {
   async function load() {
   try {
-    const products = await getProducts();
-    const rawMaterials = await getRawMaterials();
-    const recipes = await getRecipes();
-    const activities = await getActivities();
+    console.log("Loading products...");
+const products = await getProducts();
+console.log("✓ Products");
 
+console.log("Loading materials...");
+const rawMaterials = await getRawMaterials();
+console.log("✓ Materials");
+
+console.log("Loading recipes...");
+const recipes = await getRecipes();
+console.log("✓ Recipes");
+
+console.log("Loading activities...");
+const activities = await getActivities();
+console.log("✓ Activities");
+
+console.log("Products received:", products.length);
+console.log(products);
 console.log("Activities loaded:", activities);
     const productsWithRecipes = products.map((product) => ({
   ...product,
@@ -39,6 +52,10 @@ console.log("Activities loaded:", activities);
       quantity: recipe.quantity_required
     }))
 }));
+
+
+console.log("Products received:", products.length);
+console.log(products);
 
 setState((current) => ({
   ...current,
@@ -58,7 +75,7 @@ setState((current) => ({
 
   const actions = useMemo(
     () => ({
-      
+
       earnBadge(id: BadgeId) {
         setState((current) => ({
           ...current,
@@ -66,18 +83,44 @@ setState((current) => ({
         }));
       },
       adjustStock(productId: string, amount: number) {
-        setState((current) => ({
-          ...current,
-          products: current.products.map((product) =>
-            product.id === productId
-              ? { ...product, currentQuantity: Math.max(0, product.currentQuantity + amount) }
-              : product
-          ),
-          badges: current.badges.map((badge) =>
-            badge.id === "stock-counter" ? { ...badge, earned: true } : badge
-          )
-        }));
-      },
+  setState((current) => {
+    const product = current.products.find(
+      (p) => p.id === productId
+    );
+
+    if (!product) {
+      return current;
+    }
+
+    const newStock = Math.max(
+      0,
+      product.currentQuantity + amount
+    );
+
+    updateProductStock(
+      productId,
+      newStock
+    ).catch(console.error);
+
+    return {
+      ...current,
+      products: current.products.map((p) =>
+        p.id === productId
+          ? {
+              ...p,
+              currentQuantity: newStock
+            }
+          : p
+      ),
+      badges: current.badges.map((badge) =>
+        badge.id === "stock-counter"
+          ? { ...badge, earned: true }
+          : badge
+      )
+    };
+  });
+},
+
       async makeProduct(productId: string) {
         setState((current) => {
           const product = current.products.find((item) => item.id === productId);
